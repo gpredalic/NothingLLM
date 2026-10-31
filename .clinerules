@@ -1,0 +1,113 @@
+# NothingLLM — Repository Rules & Execution Discipline
+
+## Objective
+Create permanent project rules so future sessions do not repeat mistakes.
+
+## MANDATORY EXECUTION RULES
+
+From now on:
+
+- NEVER claim a feature works because code compiles.
+- NEVER claim a feature works because TypeScript passes.
+- NEVER claim a feature works because Go builds.
+- ALWAYS validate functionality.
+
+### Required order:
+1. Implement
+2. Build
+3. Test
+4. Validate
+5. Report
+
+Failure to execute tests means functionality is NOT verified.
+
+## TESTING REQUIREMENTS
+
+Before closing ANY task:
+
+### Backend:
+```
+go test ./...
+go test -race ./...
+```
+
+### Frontend:
+```
+npm run build
+npm run lint
+```
+
+### Docker:
+```
+docker compose config
+```
+
+If Docker is available:
+```
+docker compose build
+docker compose up -d
+```
+
+Required smoke tests:
+- `/health`
+- `/ready`
+- `/version`
+
+## UI REQUIREMENTS
+
+Never assume UI works because page renders.
+
+Always verify:
+- button actions
+- forms
+- API calls
+- success path
+- error path
+- loading state
+- empty state
+
+Every UI task must explicitly state:
+- PASS
+- FAIL
+- NOT TESTED
+
+## API VALIDATION
+
+Any new API endpoint must be verified using:
+- `curl`
+- or integration tests
+
+Do not rely on code inspection.
+
+## BUG INVESTIGATION
+
+When a user reports "doesn't work":
+
+Do not assume correctness. Instead:
+1. Reproduce
+2. Inspect logs
+3. Identify root cause
+4. Fix
+5. Verify fix
+
+## DOCKER REQUIREMENTS
+
+Always validate:
+```
+docker compose ps
+```
+And inspect unhealthy containers.
+
+Use:
+```
+docker logs
+docker inspect
+```
+
+Never guess.
+
+## COMMIT RULES
+
+- Commit message must describe what was done and what was tested.
+- If tests were not run, state that explicitly in the commit message.
+- Do not mark a task as "done" in a commit if validation was skipped.
