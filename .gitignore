@@ -32,6 +32,9 @@ Thumbs.db
 
 # Docker
 backups/
+docker-compose*.yml.tmp
+*.image
+.docker/
 
 # Test artifacts
 coverage.out
