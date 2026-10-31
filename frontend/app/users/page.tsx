@@ -1,71 +1,181 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listUsers } from "@/lib/api";
-import { Plus } from "lucide-react";
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-}
+import { listUsers, createUser, updateUser, deleteUser, User } from "@/lib/api";
+import { Plus, Pencil, Trash2, Key, UserX, UserCheck } from "lucide-react";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [error, setError] = useState("");
 
-  const load = () => {
+  // Create dialog
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Edit dialog
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [editRole, setEditRole] = useState("member");
+  const [editPassword, setEditPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError("");
     listUsers()
       .then((res) => setUsers(res.users))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load users"))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleCreate = async () => {
+    if (!newEmail.trim() || !newPassword.trim()) return;
+    setCreating(true);
+    setError("");
+    try {
+      await createUser(newEmail, newPassword, newName || undefined);
+      setCreateOpen(false);
+      setNewEmail("");
+      setNewPassword("");
+      setNewName("");
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create user");
+    } finally {
+      setCreating(false);
+    }
   };
 
-  useEffect(load, []);
+  const handleEdit = async () => {
+    if (!editUser) return;
+    setSaving(true);
+    setError("");
+    try {
+      const updates: { role?: string; password?: string } = {};
+      if (editRole !== editUser.role) updates.role = editRole;
+      if (editPassword) updates.password = editPassword;
+      if (Object.keys(updates).length > 0) {
+        await updateUser(editUser.id, updates);
+      }
+      setEditUser(null);
+      setEditPassword("");
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update user");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteUser(deleteTarget.id);
+      setDeleteTarget(null);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete user");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleToggleActive = async (user: User) => {
+    setError("");
+    try {
+      await updateUser(user.id, { role: user.is_active ? "disabled" : user.role });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update user");
+    }
+  };
+
+  const handleResetPassword = async (user: User) => {
+    const pwd = prompt(`Enter new password for ${user.email} (min 8 chars):`);
+    if (!pwd || pwd.length < 8) {
+      if (pwd !== null) setError("Password must be at least 8 characters");
+      return;
+    }
+    setError("");
+    try {
+      await updateUser(user.id, { password: pwd });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to reset password");
+    }
+  };
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Users</h1>
-        <Button onClick={() => setShowCreate(!showCreate)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
-      </div>
-
-      {showCreate && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">New User</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-3">
-              <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <Input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <Button>
-                Create
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create User</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name</label>
+                <Input placeholder="John Doe" value={newName} onChange={(e) => setNewName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <Input type="email" placeholder="user@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Password</label>
+                <Input type="password" placeholder="Min 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} />
+              </div>
+              <Button onClick={handleCreate} disabled={creating || !newEmail.trim() || !newPassword.trim()} className="w-full">
+                {creating ? "Creating..." : "Create User"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {error && (
+        <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </div>
       )}
 
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <p className="p-6 text-sm text-muted-foreground">Loading...</p>
+            <div className="space-y-3 p-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded bg-muted" />
+              ))}
+            </div>
+          ) : users.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No users found.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -75,6 +185,7 @@ export default function UsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,6 +204,38 @@ export default function UsersPage() {
                     <TableCell className="text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString()}
                     </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost" size="icon" className="h-8 w-8"
+                          title="Edit"
+                          onClick={() => { setEditUser(u); setEditRole(u.role); setEditPassword(""); }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon" className="h-8 w-8"
+                          title="Reset Password"
+                          onClick={() => handleResetPassword(u)}
+                        >
+                          <Key className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon" className="h-8 w-8"
+                          title={u.is_active ? "Disable" : "Enable"}
+                          onClick={() => handleToggleActive(u)}
+                        >
+                          {u.is_active ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                          title="Delete"
+                          onClick={() => setDeleteTarget(u)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -100,6 +243,56 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User: {editUser?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Role</label>
+              <select
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">New Password (optional)</label>
+              <Input
+                type="password"
+                placeholder="Leave blank to keep current"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                minLength={8}
+              />
+            </div>
+            <Button onClick={handleEdit} disabled={saving} className="w-full">
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <strong>{deleteTarget?.email}</strong>? This action cannot be undone.
+          </p>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="w-full">
+            {deleting ? "Deleting..." : "Delete User"}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

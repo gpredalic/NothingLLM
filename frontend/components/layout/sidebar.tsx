@@ -10,10 +10,13 @@ import {
   MessageSquare,
   Users,
   Settings,
+  Cpu,
   Sun,
   Moon,
   Monitor,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
@@ -26,13 +29,28 @@ const navItems = [
   { href: "/collections", label: "Collections", icon: Database },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/models", label: "Models", icon: Cpu },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+const themeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+};
 
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(true);
+
+  // Cycle through themes: light -> dark -> system
+  const cycleTheme = () => {
+    const next = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+    setTheme(next as "light" | "dark" | "system");
+  };
+
+  const ThemeIcon = themeIcons[theme] || Monitor;
 
   return (
     <aside className={cn("flex h-full flex-col border-r bg-card transition-all", open ? "w-56" : "w-14")}>
@@ -53,6 +71,7 @@ export function Sidebar() {
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
+              title={!open ? item.label : undefined}
             >
               <item.icon className="h-4 w-4 shrink-0" />
               {open && <span>{item.label}</span>}
@@ -68,12 +87,17 @@ export function Sidebar() {
           className="w-full justify-start text-muted-foreground"
           onClick={() => setOpen(!open)}
         >
-          <Monitor className="h-4 w-4" />
+          {open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
           {open && <span>Collapse</span>}
         </Button>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cycleTheme}
+            title={`Theme: ${theme} (click to cycle)`}
+          >
+            <ThemeIcon className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -82,6 +106,7 @@ export function Sidebar() {
               await logout();
               window.location.href = "/login";
             }}
+            title="Logout"
           >
             <LogOut className="h-4 w-4" />
           </Button>

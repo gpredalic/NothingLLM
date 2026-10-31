@@ -63,6 +63,15 @@ func (s *Server) routes() {
 	// RAG
 	s.mux.HandleFunc("POST /api/workspaces/{workspace_id}/search", auth.RequireAuth(s.auth, s.handleSearch))
 	s.mux.HandleFunc("POST /api/workspaces/{workspace_id}/chat", auth.RequireAuth(s.auth, s.handleChat))
+
+	// Admin
+	s.mux.HandleFunc("GET /api/models", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleListModels)))
+	s.mux.HandleFunc("PATCH /api/models/{id}", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleUpdateModel)))
+	s.mux.HandleFunc("GET /api/admin/settings", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleGetSettings)))
+	s.mux.HandleFunc("PUT /api/admin/settings", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleUpdateSettings)))
+	s.mux.HandleFunc("POST /api/admin/test-connection", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleTestConnection)))
+	s.mux.HandleFunc("GET /api/admin/stats", auth.RequireAuth(s.auth, s.handleGetStats))
+	s.mux.HandleFunc("GET /api/health", s.handleHealth)
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
