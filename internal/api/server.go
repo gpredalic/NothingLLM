@@ -40,6 +40,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
 
 	s.mux.HandleFunc("GET /api/users", auth.RequireAuth(s.auth, s.handleListUsers))
+	s.mux.HandleFunc("POST /api/users", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleCreateUser)))
 	s.mux.HandleFunc("PATCH /api/users/{id}", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleUpdateUser)))
 	s.mux.HandleFunc("DELETE /api/users/{id}", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleDeleteUser)))
 
@@ -76,6 +77,12 @@ func (s *Server) routes() {
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	// Block public registration after setup is complete
+	setupComplete, _ := s.db.IsSetupComplete(r.Context())
+	if setupComplete {
+		writeErr(w, http.StatusForbidden, "registration is disabled; contact an admin")
+		return
+	}
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`

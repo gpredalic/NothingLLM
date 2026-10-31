@@ -3,12 +3,57 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"nothingllm/internal/audit"
 	"nothingllm/internal/auth"
 	"nothingllm/internal/db"
 )
+
+func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	admin := auth.GetUser(r.Context())
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Role     string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Email == "" || body.Password == "" {
+		writeErr(w, http.StatusBadRequest, "email and password are required")
+		return
+	}
+	if len(body.Email) > 254 || len(body.Password) > 128 {
+		writeErr(w, http.StatusBadRequest, "input too long")
+		return
+	}
+	if body.Role == "" {
+		body.Role = "user"
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, fmt.Sprintf("failed to hash password: %v", err))
+		return
+	}
+	user, err := s.db.CreateUser(r.Context(), body.Email, string(hash), body.Role)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to create user")
+		return
+	}
+	s.audit.Log(audit.Event{
+		UserID:     admin.ID,
+		Action:     "create_user",
+		EntityType: "user",
+		EntityID:   user.ID,
+		Metadata:   map[string]any{"email": user.Email, "role": user.Role},
+	})
+	writeJSON(w, http.StatusCreated, user)
+}
 
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := s.db.ListUsers(r.Context())

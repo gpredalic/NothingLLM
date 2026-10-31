@@ -49,11 +49,11 @@ export async function getUser(id: string) {
   return request<User>(`/api/users/${id}`);
 }
 
-export async function createUser(email: string, password: string, name?: string) {
-  return request<{ id: string; email: string }>(`/api/auth/register`, {
+export async function createUser(email: string, password: string, role?: string) {
+  return request<{ id: string; email: string; role: string }>(`/api/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, role }),
   });
 }
 

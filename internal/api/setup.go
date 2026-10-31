@@ -18,11 +18,13 @@ import (
 
 // SetupServer handles the first-run setup wizard.
 type SetupServer struct {
-	database *db.DB
+	database    *db.DB
+	qdrantURL   string
+	qdrantKey   string
 }
 
-func NewSetupServer(database *db.DB) *SetupServer {
-	return &SetupServer{database: database}
+func NewSetupServer(database *db.DB, qdrantURL, qdrantKey string) *SetupServer {
+	return &SetupServer{database: database, qdrantURL: qdrantURL, qdrantKey: qdrantKey}
 }
 
 // Handler returns the setup mux.
@@ -186,8 +188,19 @@ func (s *SetupServer) handleComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.database.GetSetting(ctx, "qdrant_url"); err != nil {
-		writeErr(w, http.StatusBadRequest, "qdrant_url required")
-		return
+		// Auto-set qdrant_url from environment (Docker deployment)
+		if s.qdrantURL != "" {
+			if err := s.database.SetSetting(ctx, "qdrant_url", s.qdrantURL); err != nil {
+				writeErr(w, http.StatusInternalServerError, "failed to save qdrant_url")
+				return
+			}
+			if s.qdrantKey != "" {
+				s.database.SetSetting(ctx, "qdrant_api_key", s.qdrantKey)
+			}
+		} else {
+			writeErr(w, http.StatusBadRequest, "qdrant_url required")
+			return
+		}
 	}
 
 	secret, err := generateSecret()

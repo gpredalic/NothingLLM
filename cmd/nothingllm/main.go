@@ -91,7 +91,7 @@ func loadConfigFromDB(ctx context.Context, database *db.DB, dsn string) (*config
 }
 
 func runSetupMode(logger *slog.Logger, database *db.DB) {
-	setupSrv := api.NewSetupServer(database)
+	setupSrv := api.NewSetupServer(database, os.Getenv("QDRANT_URL"), os.Getenv("QDRANT_API_KEY"))
 	mux := http.NewServeMux()
 	mux.Handle("/api/setup/", setupSrv.Handler())
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
