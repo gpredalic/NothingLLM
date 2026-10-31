@@ -62,6 +62,11 @@ func Load(path string) (*Config, error) {
 	return &c, nil
 }
 
+// Validate checks that all required fields are set.
+func (c *Config) Validate() error {
+	return c.validate()
+}
+
 func (c *Config) validate() error {
 	if c.Database.DSN == "" {
 		return fmt.Errorf("config: database.dsn is required")

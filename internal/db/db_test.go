@@ -9,14 +9,14 @@ func TestMigrationsEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to read embedded migrations:", err)
 	}
-	if len(entries) != 4 {
-		t.Errorf("expected 4 migration files, got %d", len(entries))
+	if len(entries) != 5 {
+		t.Errorf("expected 5 migration files, got %d", len(entries))
 	}
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
 		names = append(names, e.Name())
 	}
-	expected := []string{"001_init.sql", "002_workspaces.sql", "003_content.sql", "004_dynamic.sql"}
+	expected := []string{"001_init.sql", "002_workspaces.sql", "003_content.sql", "004_dynamic.sql", "005_settings.sql"}
 	for i, name := range expected {
 		if names[i] != name {
 			t.Errorf("migration[%d] = %q, want %q", i, names[i], name)
