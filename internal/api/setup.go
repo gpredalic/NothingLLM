@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"nothingllm/internal/db"
 	"nothingllm/internal/openai"
@@ -79,7 +82,12 @@ func (s *SetupServer) handleCreateAdmin(w http.ResponseWriter, r *http.Request) 
 		writeErr(w, http.StatusBadRequest, "input too long")
 		return
 	}
-	user, err := s.database.CreateUser(ctx, body.Email, body.Password, "admin")
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, fmt.Sprintf("failed to hash password: %v", err))
+		return
+	}
+	user, err := s.database.CreateUser(ctx, body.Email, string(hash), "admin")
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "failed to create admin")
 		return
