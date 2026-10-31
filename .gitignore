@@ -3,7 +3,7 @@
 *.o
 *.so
 *.a
-nothingllm
+/nothingllm
 build/
 
 # Go
