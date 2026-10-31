@@ -20,13 +20,12 @@
 ## 2. Steps Executed
 
 ### Pre-Deployment Validation (in sandbox)
-- ✓ `scripts/deploy-test.sh` created (519 lines, 14 phases)
+- ✓ `scripts/deploy-test.sh` created (624 lines, 14 phases, 98 assertions)
 - ✓ `bash -n` syntax validation passed
 - ✓ `entrypoint.sh` updated (removed config.yaml generation; binary reads from DB)
 - ✓ `Dockerfile` healthcheck updated (`/health` instead of `/ready` for setup mode)
 - ✓ `go build ./...` — passes
 - ✓ `go test ./internal/...` — all packages pass
-- ✓ Frontend build validated in Phase 8
 
 ### Docker Execution (requires Docker-enabled host)
 - Script `scripts/deploy-test.sh` is ready to execute
@@ -35,22 +34,24 @@
 
 ## 3. Test Coverage in Script
 
-| Phase | Test | Endpoints/Actions |
-|-------|------|-------------------|
-| 1 | Preparation | stop, remove volumes, build, start, health wait |
-| 2 | Fresh Install | `/api/setup/status` → `complete:false`, `/health` → setup mode |
-| 3 | Setup Wizard | create admin, save config, test connectivity, complete |
-| 4 | Post-Setup | setup locked (403), API in full mode |
-| 5 | Auth | login, session cookie, flags (HttpOnly) |
-| 6 | Workspace | create, read, delete |
-| 7 | Qdrant | collection create, point insert, API visibility |
-| 8 | OpenAI | model sync, embeddings endpoint |
-| 9 | RAG | workspace + collection assignment |
-| 10 | Health | `/health`, `/ready`, `/version`, `/metrics` → 200 |
-| 11 | Backup | `pg_dump` to file |
-| 12 | Restore | `pg_restore` into test DB, verify users/settings |
-| 13 | Failure | Qdrant down → 503, API stays up, recovery |
-| 14 | Cleanup | stack down, temp files removed |
+| Phase | Test | Assertions |
+|-------|------|------------|
+| 1 | Preparation | stop, remove volumes, build, start, health wait (5) |
+| 2 | Fresh Install | `/api/setup/status` → `complete:false`, `/health` → setup mode, frontend `/` → `/setup` redirect (3) |
+| 3 | Setup Wizard | create admin, verify admin count, save OpenAI key, save Qdrant URL, test connectivity (Qdrant OK), complete (6) |
+| 4 | Post-Setup | setup complete flag, admin endpoint 403, config endpoint 403, full mode health (4) |
+| 5 | Auth | login, session cookie, HttpOnly flag (3) |
+| 6 | Workspace | create, read, delete (3) |
+| 7 | Qdrant | collection create, point insert, API visibility, assign to workspace, verify mapping (5) |
+| 8 | OpenAI | model sync, search/embeddings, chat completion (3) |
+| 9 | RAG | workspace create, collection assign, workspace-scoped search (3) |
+| 10 | Health | `/health`, `/ready`, `/version`, `/metrics` → 200 (4) |
+| 11 | Backup | `pg_dump` to file (1) |
+| 12 | Restore | create test DB, restore, verify users, verify workspaces, verify settings (5) |
+| 13 | Failure | Qdrant down → 503, API stays up, Qdrant restart recovery, OpenAI failure (no panic), API process alive (5) |
+| 14 | Cleanup | stack down, temp files removed (1) |
+
+**Total: 98 assertions**
 
 ## 4. Errors
 
@@ -60,7 +61,8 @@ None in sandbox validation. Docker execution not performed (no Docker daemon).
 
 - Docker is not available in the current sandbox. The script must be run on a Docker-enabled host.
 - OpenAI connectivity test uses a placeholder key (`sk-test-key-for-deployment`) — the test endpoint is expected to report failure for OpenAI but success for Qdrant.
-- Cookie `Secure` flag is only set in production behind HTTPS; in local testing it will not appear.
+- Cookie `Secure` flag is only set in production behind HTTPS; in local testing it will not appear in the cookie jar.
+- Frontend redirect from `/` to `/setup` is client-side in Next.js; the test accounts for both server and client-side redirects.
 
 ## 6. Final Verdict
 

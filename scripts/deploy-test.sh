@@ -165,6 +165,22 @@ else
     warn "Health does not report setup mode explicitly: $RESP"
 fi
 
+log "[2.3] Verifying frontend / redirects to /setup..."
+sleep 3
+FRONTEND_RESP=$(curl -s -o /dev/null -w "%{http_code}" "${WEB_URL}/" 2>/dev/null)
+if [ "$FRONTEND_RESP" = "200" ] || [ "$FRONTEND_RESP" = "302" ] || [ "$FRONTEND_RESP" = "307" ]; then
+    # Check if it's a redirect or the setup page content
+    REDIRECT_LOCATION=$(curl -s -o /dev/null -w "%{redirect_url}" "${WEB_URL}/" 2>/dev/null)
+    if echo "$REDIRECT_LOCATION" | grep -q "setup"; then
+        pass "Frontend / redirects to /setup"
+    else
+        # In Next.js, the redirect may be client-side; verify the page loads
+        warn "Frontend / does not server-redirect to /setup (client-side redirect expected)"
+    fi
+else
+    warn "Frontend not responding (got $FRONTEND_RESP)"
+fi
+
 # ============================================================
 # PHASE 3: SETUP WIZARD TEST
 # ============================================================
@@ -364,6 +380,29 @@ else
     warn "Collection not yet visible (sync pending): $RESP"
 fi
 
+log "[7.4] Assigning collection to workspace..."
+WS_ASSIGN=$(curl -sf -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces" \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Qdrant Test WS"}' 2>/dev/null)
+WS3_ID=$(echo "$WS_ASSIGN" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+if [ -n "$WS3_ID" ]; then
+    RESP=$(curl -sf -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces/${WS3_ID}/collections/test-documents" 2>/dev/null)
+    if echo "$RESP" | grep -q '"status":"ok"'; then
+        pass "Collection assigned to workspace"
+    else
+        fail "Collection assignment failed: $RESP"
+    fi
+    log "[7.5] Verifying workspace-collection mapping..."
+    RESP=$(curl -sf -b /tmp/nlm_cookies.txt "${API_URL}/api/workspaces/${WS3_ID}/collections" 2>/dev/null)
+    if echo "$RESP" | grep -q "test-documents"; then
+        pass "Workspace-collection mapping verified"
+    else
+        fail "Mapping not found: $RESP"
+    fi
+else
+    fail "Could not create workspace for Qdrant test"
+fi
+
 # ============================================================
 # PHASE 8: OPENAI TEST
 # ============================================================
@@ -378,15 +417,27 @@ else
 fi
 
 log "[8.2] Verifying embeddings endpoint..."
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/embed" \
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces/${WS3_ID}/search" \
     -H "Content-Type: application/json" \
-    -d '{"text":"test"}' 2>/dev/null)
+    -d '{"query":"hello","top_k":3}' 2>/dev/null)
 if [ "$CODE" = "200" ]; then
-    pass "Embeddings endpoint OK"
+    pass "Search/embeddings pipeline OK"
 elif [ "$CODE" = "502" ] || [ "$CODE" = "503" ]; then
-    warn "Embeddings returned $CODE (expected with test key)"
+    warn "Search returned $CODE (expected with test key)"
 else
-    warn "Embeddings returned unexpected $CODE"
+    warn "Search returned unexpected $CODE"
+fi
+
+log "[8.3] Verifying chat completion endpoint..."
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces/${WS3_ID}/chat" \
+    -H "Content-Type: application/json" \
+    -d '{"messages":[{"role":"user","content":"Hello"}]}' 2>/dev/null)
+if [ "$CODE" = "200" ]; then
+    pass "Chat completion OK"
+elif [ "$CODE" = "502" ] || [ "$CODE" = "503" ] || [ "$CODE" = "500" ]; then
+    warn "Chat returned $CODE (expected with test key)"
+else
+    warn "Chat returned unexpected $CODE"
 fi
 
 # ============================================================
@@ -403,6 +454,28 @@ if [ -n "$WS2_ID" ]; then
     pass "RAG workspace created"
 else
     warn "RAG workspace creation failed: $WS_RESP"
+fi
+
+log "[9.2] Assigning test-documents collection to RAG workspace..."
+if [ -n "$WS2_ID" ]; then
+    RESP=$(curl -sf -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces/${WS2_ID}/collections/test-documents" 2>/dev/null)
+    if echo "$RESP" | grep -q '"status":"ok"'; then
+        pass "Collection assigned to RAG workspace"
+    else
+        warn "Collection assignment failed: $RESP"
+    fi
+fi
+
+log "[9.3] Running workspace-scoped search..."
+if [ -n "$WS2_ID" ]; then
+    RESP=$(curl -sf -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces/${WS2_ID}/search" \
+        -H "Content-Type: application/json" \
+        -d '{"query":"NothingLLM","top_k":5}' 2>/dev/null)
+    if [ -n "$RESP" ]; then
+        pass "RAG search executed (workspace-scoped)"
+    else
+        warn "RAG search failed (may need valid OpenAI key for embeddings)"
+    fi
 fi
 
 # ============================================================
@@ -458,6 +531,13 @@ else
     fail "Users not found in restore"
 fi
 
+WS_COUNT=$(docker compose exec -T postgres psql -U nlm nlm_restore -t -c "SELECT COUNT(*) FROM workspaces;" 2>/dev/null | tr -d ' ')
+if [ "$WS_COUNT" -ge 1 ] 2>/dev/null; then
+    pass "Workspaces restored ($WS_COUNT)"
+else
+    warn "No workspaces in restore (may be expected if none created)"
+fi
+
 SETTINGS_COUNT=$(docker compose exec -T postgres psql -U nlm nlm_restore -t -c "SELECT COUNT(*) FROM settings;" 2>/dev/null | tr -d ' ')
 if [ "$SETTINGS_COUNT" -ge 1 ] 2>/dev/null; then
     pass "Settings restored ($SETTINGS_COUNT rows)"
@@ -500,6 +580,31 @@ if [ "$CODE" = "200" ]; then
     pass "API recovers after Qdrant restart"
 else
     warn "API not ready after Qdrant restart (got $CODE)"
+fi
+
+log "[13.5] Testing OpenAI failure (invalid key already set)..."
+RESP=$(curl -s -b /tmp/nlm_cookies.txt -X POST "${API_URL}/api/workspaces/${WS2_ID}/chat" \
+    -H "Content-Type: application/json" \
+    -d '{"messages":[{"role":"user","content":"test"}]}' 2>/dev/null)
+CODE=$?
+if [ $CODE -eq 0 ]; then
+    pass "Chat with bad key returned response (no panic)"
+else
+    # curl failed - check API is still alive
+    CODE2=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health" 2>/dev/null)
+    if [ "$CODE2" = "200" ]; then
+        pass "API stable after OpenAI failure (no crash)"
+    else
+        fail "API crashed after OpenAI failure"
+    fi
+fi
+
+log "[13.6] Verifying API process still running..."
+PROC_STATUS=$(docker compose ps api 2>/dev/null | grep -c "running" || echo "0")
+if [ "$PROC_STATUS" -ge 1 ]; then
+    pass "API container still running"
+else
+    warn "Cannot verify API container status"
 fi
 
 # ============================================================
