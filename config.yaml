@@ -1,0 +1,22 @@
+server:
+  addr: ":8080"
+
+database:
+  dsn: "postgres://nlm:nlm@localhost:5432/nothingllm?sslmode=disable"
+
+qdrant:
+  url: "http://localhost:6333"
+  api_key: ""
+  sync_interval: "60s"
+
+openai:
+  api_key: "sk-placeholder"
+  embedding_model: "text-embedding-3-small"
+
+auth:
+  session_ttl: "24h"
+  bcrypt_cost: 12
+
+rate_limit:
+  requests_per_minute: 100
+  login_per_minute: 5

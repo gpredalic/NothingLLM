@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Run Go tests
+        run: go test ./... -count=1
+
+      - name: Build backend
+        run: |
+          CGO_ENABLED=0 go build \
+            -ldflags="-s -w -X main.Version=ci -X main.GitCommit=${{ github.sha }} -X main.BuildDate=$(date -Iseconds)" \
+            -o /dev/null ./cmd/nothingllm
+        shell: bash
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npx next build
+
+      - name: Validate docker compose config
+        run: docker compose config --quiet

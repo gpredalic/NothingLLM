@@ -1,0 +1,11 @@
+.git
+.gitignore
+*.md
+frontend/
+docker-compose*.yml
+.env
+.env.*
+!*.example
+*.test.go
+build/
+tmp/

@@ -1,0 +1,42 @@
+# Binaries
+*.exe
+*.o
+*.so
+*.a
+nothingllm
+build/
+
+# Go
+vendor/
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+backups/
+
+# Test artifacts
+coverage.out
+*.test
+/tmp/
+
+# Logs
+*.log
