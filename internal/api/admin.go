@@ -21,7 +21,66 @@ func (s *Server) handleListModels(w http.ResponseWriter, r *http.Request) {
 	if models == nil {
 		models = []db.Model{}
 	}
-	writeJSON(w, http.StatusOK, models)
+	defaultModel, _ := s.db.GetSetting(r.Context(), "default_model")
+	type modelWithDefault struct {
+		db.Model
+		IsDefault bool `json:"is_default"`
+	}
+	out := make([]modelWithDefault, 0, len(models))
+	for _, m := range models {
+		out = append(out, modelWithDefault{Model: m, IsDefault: m.ID == defaultModel})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) handleSetDefaultModel(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.ID == "" {
+		// Clear default
+		if err := s.db.SetSetting(r.Context(), "default_model", ""); err != nil {
+			writeErr(w, http.StatusInternalServerError, "failed to clear default model")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		return
+	}
+	// Verify model exists and is enabled
+	models, err := s.db.ListModels(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to list models")
+		return
+	}
+	found := false
+	for _, m := range models {
+		if m.ID == body.ID {
+			if !m.Enabled {
+				writeErr(w, http.StatusBadRequest, "model is not enabled")
+				return
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		writeErr(w, http.StatusNotFound, "model not found")
+		return
+	}
+	if err := s.db.SetSetting(r.Context(), "default_model", body.ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "failed to set default model")
+		return
+	}
+	s.audit.Log(audit.Event{
+		Action:     "set_default_model",
+		EntityType: "model",
+		EntityID:   body.ID,
+	})
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) handleUpdateModel(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +235,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		results["qdrant"] = map[string]string{"status": "not_configured"}
 	} else {
 		client := qdrant.NewClient(qdrantURL, qdrantKey)
-		testCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		testCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 		if err := client.Ping(testCtx); err != nil {
 			results["qdrant"] = map[string]string{"status": "down", "error": err.Error()}
@@ -190,7 +249,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		results["openai"] = map[string]string{"status": "not_configured"}
 	} else {
 		client := openai.NewClient(openaiKey, "")
-		testCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		testCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 		if err := client.Ping(testCtx); err != nil {
 			results["openai"] = map[string]string{"status": "down", "error": err.Error()}

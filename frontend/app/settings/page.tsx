@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTheme } from "@/components/theme-provider";
 import { getAdminSettings, updateAdminSettings, testConnection, AdminSettings } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
 import { Moon, Sun, Monitor, Key, Database, Cpu, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,7 @@ export default function SettingsPage() {
         await updateAdminSettings(updates);
       }
       setMessage({ type: "success", text: "Settings saved successfully" });
+      toast("success", "Settings saved");
       setOpenaiKey("");
       setQdrantKey("");
       load();

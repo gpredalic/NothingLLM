@@ -22,8 +22,8 @@ export default function ChatPage() {
 
   useEffect(() => {
     listWorkspaces().then((res) => {
-      setWorkspaces(res.workspaces);
-      if (res.workspaces.length > 0) setActiveWs(res.workspaces[0].id);
+      setWorkspaces(res);
+      if (res.length > 0) setActiveWs(res[0].id);
     });
   }, []);
 

@@ -43,18 +43,17 @@ export default function DashboardPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+    // Load stats first (fast DB query)
     try {
-      const [statsRes, healthRes] = await Promise.allSettled([
-        getAdminStats(),
-        getHealth(),
-      ]);
-      if (statsRes.status === "fulfilled") setStats(statsRes.value);
-      if (healthRes.status === "fulfilled") setHealth(healthRes.value);
+      const statsRes = await getAdminStats();
+      setStats(statsRes);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
+    // Load health in background (may be slow if services are down)
+    getHealth().then(setHealth).catch(() => {});
   }, []);
 
   useEffect(() => {

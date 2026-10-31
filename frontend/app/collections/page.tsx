@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listCollections, listWorkspaces, assignCollection, Collection, Workspace } from "@/lib/api";
-import { RefreshCw, Search, FolderOpen } from "lucide-react";
+import { listCollections, listWorkspaces, listWorkspaceCollections, assignCollection, unassignCollection, Collection, Workspace } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
+import { RefreshCw, Search, FolderOpen, Unlink } from "lucide-react";
 
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -19,14 +20,23 @@ export default function CollectionsPage() {
   const [assignTarget, setAssignTarget] = useState<Collection | null>(null);
   const [selectedWs, setSelectedWs] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [wsCollections, setWsCollections] = useState<Record<string, string[]>>({});
 
   const load = useCallback(() => {
     setLoading(true);
     setError("");
     Promise.allSettled([listCollections(), listWorkspaces()])
       .then(([cols, ws]) => {
-        if (cols.status === "fulfilled") setCollections(cols.value.collections);
-        if (ws.status === "fulfilled") setWorkspaces(ws.value.workspaces);
+        if (cols.status === "fulfilled") setCollections(cols.value);
+        if (ws.status === "fulfilled") setWorkspaces(ws.value);
+        // Load collections for each workspace
+        if (ws.status === "fulfilled") {
+          ws.value.forEach((w) => {
+            listWorkspaceCollections(w.id).then((names) => {
+              setWsCollections((prev) => ({ ...prev, [w.id]: names }));
+            }).catch(() => {});
+          });
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -46,6 +56,7 @@ export default function CollectionsPage() {
     setError("");
     try {
       await assignCollection(selectedWs, assignTarget.name);
+      toast("success", "Collection assigned");
       setAssignTarget(null);
       setSelectedWs("");
       load();
@@ -53,6 +64,17 @@ export default function CollectionsPage() {
       setError(e instanceof Error ? e.message : "Failed to assign collection");
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const handleUnassign = async (wsId: string, colName: string) => {
+    setError("");
+    try {
+      await unassignCollection(wsId, colName);
+      toast("success", "Collection removed");
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove collection");
     }
   };
 
@@ -132,10 +154,27 @@ export default function CollectionsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {c.last_synced_at ? new Date(c.last_synced_at).toLocaleString() : "Never"}
+                      {c.updated_at ? new Date(c.updated_at).toLocaleString() : "Never"}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end">
+                      <div className="flex justify-end items-center gap-1">
+                        {workspaces.map((ws) => {
+                          const assigned = wsCollections[ws.id]?.includes(c.name);
+                          if (assigned) {
+                            return (
+                              <Button
+                                key={ws.id}
+                                variant="ghost" size="sm" className="h-7 text-xs text-destructive"
+                                onClick={() => handleUnassign(ws.id, c.name)}
+                                title={`Remove from ${ws.name}`}
+                              >
+                                <Unlink className="h-3 w-3 mr-1" />
+                                {ws.name}
+                              </Button>
+                            );
+                          }
+                          return null;
+                        })}
                         <Button
                           variant="ghost" size="sm" className="h-8 text-xs"
                           onClick={() => setAssignTarget(c)}

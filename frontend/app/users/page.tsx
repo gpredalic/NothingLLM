@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listUsers, createUser, updateUser, deleteUser, User } from "@/lib/api";
-import { Plus, Pencil, Trash2, Key, UserX, UserCheck } from "lucide-react";
+import { toast } from "@/components/ui/toast";
+import { Plus, Pencil, Trash2, Key } from "lucide-react";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -19,7 +20,6 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
 
   // Edit dialog
@@ -36,7 +36,7 @@ export default function UsersPage() {
     setLoading(true);
     setError("");
     listUsers()
-      .then((res) => setUsers(res.users))
+      .then((res) => setUsers(res))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load users"))
       .finally(() => setLoading(false));
   }, []);
@@ -48,11 +48,11 @@ export default function UsersPage() {
     setCreating(true);
     setError("");
     try {
-      await createUser(newEmail, newPassword, newName || undefined);
+      await createUser(newEmail, newPassword);
+      toast("success", "User created");
       setCreateOpen(false);
       setNewEmail("");
       setNewPassword("");
-      setNewName("");
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create user");
@@ -71,6 +71,7 @@ export default function UsersPage() {
       if (editPassword) updates.password = editPassword;
       if (Object.keys(updates).length > 0) {
         await updateUser(editUser.id, updates);
+        toast("success", "User updated");
       }
       setEditUser(null);
       setEditPassword("");
@@ -97,29 +98,10 @@ export default function UsersPage() {
     }
   };
 
-  const handleToggleActive = async (user: User) => {
-    setError("");
-    try {
-      await updateUser(user.id, { role: user.is_active ? "disabled" : user.role });
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update user");
-    }
-  };
-
-  const handleResetPassword = async (user: User) => {
-    const pwd = prompt(`Enter new password for ${user.email} (min 8 chars):`);
-    if (!pwd || pwd.length < 8) {
-      if (pwd !== null) setError("Password must be at least 8 characters");
-      return;
-    }
-    setError("");
-    try {
-      await updateUser(user.id, { password: pwd });
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reset password");
-    }
+  const handleResetPassword = (user: User) => {
+    setEditUser(user);
+    setEditRole(user.role);
+    setEditPassword("");
   };
 
   return (
@@ -130,7 +112,7 @@ export default function UsersPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Add User
+              New User
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -139,16 +121,12 @@ export default function UsersPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Name</label>
-                <Input placeholder="John Doe" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
                 <label className="text-sm font-medium">Email</label>
-                <Input type="email" placeholder="user@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Password</label>
-                <Input type="password" placeholder="Min 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8} />
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="min 8 chars" minLength={8} />
               </div>
               <Button onClick={handleCreate} disabled={creating || !newEmail.trim() || !newPassword.trim()} className="w-full">
                 {creating ? "Creating..." : "Create User"}
@@ -165,25 +143,26 @@ export default function UsersPage() {
       )}
 
       <Card>
-        <CardContent className="p-0">
+        <CardHeader>
+          <CardTitle className="text-base">All Users ({users.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
           {loading ? (
-            <div className="space-y-3 p-6">
+            <div className="space-y-2">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-12 animate-pulse rounded bg-muted" />
               ))}
             </div>
           ) : users.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">
-              No users found.
+            <div className="py-8 text-center">
+              <p className="text-sm text-muted-foreground">No users found.</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -191,15 +170,9 @@ export default function UsersPage() {
               <TableBody>
                 {users.map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.name || "—"}</TableCell>
-                    <TableCell>{u.email}</TableCell>
+                    <TableCell className="font-medium">{u.email}</TableCell>
                     <TableCell>
                       <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={u.is_active ? "success" : "destructive"}>
-                        {u.is_active ? "Active" : "Disabled"}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString()}
@@ -219,13 +192,6 @@ export default function UsersPage() {
                           onClick={() => handleResetPassword(u)}
                         >
                           <Key className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost" size="icon" className="h-8 w-8"
-                          title={u.is_active ? "Disable" : "Enable"}
-                          onClick={() => handleToggleActive(u)}
-                        >
-                          {u.is_active ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
                         </Button>
                         <Button
                           variant="ghost" size="icon" className="h-8 w-8 text-destructive"

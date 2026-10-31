@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { listWorkspaces, createWorkspace, deleteWorkspace, Workspace } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
 import { Plus, FolderKanban, Trash2 } from "lucide-react";
 
 export default function WorkspacesPage() {
@@ -24,7 +25,7 @@ export default function WorkspacesPage() {
     setLoading(true);
     setError("");
     listWorkspaces()
-      .then((res) => setWorkspaces(res.workspaces))
+      .then((res) => setWorkspaces(res))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load workspaces"))
       .finally(() => setLoading(false));
   }, []);
@@ -37,6 +38,7 @@ export default function WorkspacesPage() {
     setError("");
     try {
       await createWorkspace(name, description);
+      toast("success", "Workspace created");
       setDialogOpen(false);
       setName("");
       setDescription("");
@@ -54,6 +56,7 @@ export default function WorkspacesPage() {
     setError("");
     try {
       await deleteWorkspace(deleteTarget.id);
+      toast("success", "Workspace deleted");
       setDeleteTarget(null);
       load();
     } catch (e) {

@@ -103,7 +103,12 @@ type ChatRequest struct {
 // Chat performs a RAG-augmented chat completion.
 func (p *Pipeline) Chat(ctx context.Context, req *ChatRequest) (*openai.ChatResponse, error) {
 	if req.ModelID == "" {
-		req.ModelID = "gpt-4o"
+		// Fall back to default model from settings
+		if defaultModel, err := p.database.GetSetting(ctx, "default_model"); err == nil && defaultModel != "" {
+			req.ModelID = defaultModel
+		} else {
+			req.ModelID = "gpt-4o"
+		}
 	}
 	if req.Temperature == 0 {
 		req.Temperature = 0.7

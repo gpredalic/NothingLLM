@@ -37,14 +37,12 @@ export async function logout() {
 export interface User {
   id: string;
   email: string;
-  name: string;
   role: string;
-  is_active: boolean;
   created_at: string;
 }
 
 export async function listUsers() {
-  return request<{ users: User[] }>(`/api/users`);
+  return request<User[]>(`/api/users`);
 }
 
 export async function getUser(id: string) {
@@ -80,16 +78,21 @@ export interface Workspace {
 }
 
 export interface WorkspaceMember {
-  user_id: string;
+  id: string;
+  email: string;
   role: string;
 }
 
 export async function listWorkspaces() {
-  return request<{ workspaces: Workspace[] }>(`/api/workspaces`);
+  return request<Workspace[]>(`/api/workspaces`);
 }
 
 export async function getWorkspace(id: string) {
-  return request<Workspace & { members: WorkspaceMember[] }>(`/api/workspaces/${id}`);
+  return request<Workspace>(`/api/workspaces/${id}`);
+}
+
+export async function listWorkspaceMembers(wsId: string) {
+  return request<WorkspaceMember[]>(`/api/workspaces/${wsId}/members`);
 }
 
 export async function createWorkspace(name: string, description?: string) {
@@ -122,16 +125,12 @@ export interface Collection {
   vector_count: number;
   dimensions: number;
   status: string;
-  last_synced_at: string;
-}
-
-export interface WorkspaceCollection {
-  collection: Collection;
-  role: string;
+  discovered_at: string;
+  updated_at: string;
 }
 
 export async function listCollections() {
-  return request<{ collections: Collection[] }>(`/api/collections`);
+  return request<Collection[]>(`/api/collections`);
 }
 
 export async function getCollection(name: string) {
@@ -139,7 +138,7 @@ export async function getCollection(name: string) {
 }
 
 export async function listWorkspaceCollections(wsId: string) {
-  return request<{ collections: WorkspaceCollection[] }>(`/api/workspaces/${wsId}/collections`);
+  return request<string[]>(`/api/workspaces/${wsId}/collections`);
 }
 
 export async function assignCollection(wsId: string, name: string) {
@@ -193,6 +192,7 @@ export interface Model {
   enabled: boolean;
   synced_at: string;
   created_at?: string;
+  is_default: boolean;
 }
 
 export async function listModels() {
@@ -204,6 +204,14 @@ export async function updateModel(id: string, enabled: boolean) {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function setDefaultModel(id: string) {
+  return request<{ status: string }>(`/api/models/default`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
   });
 }
 

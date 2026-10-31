@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listModels, updateModel, Model } from "@/lib/api";
-import { Cpu, RefreshCw } from "lucide-react";
+import { listModels, updateModel, setDefaultModel, Model } from "@/lib/api";
+import { toast } from "@/components/ui/toast";
+import { Cpu, RefreshCw, Star } from "lucide-react";
 
 export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([]);
@@ -38,6 +39,19 @@ export default function ModelsPage() {
       setError(e instanceof Error ? e.message : "Failed to update model");
     } finally {
       setToggling(null);
+    }
+  };
+
+  const handleSetDefault = async (model: Model) => {
+    setError("");
+    try {
+      await setDefaultModel(model.id);
+      toast("success", `${model.id} set as default model`);
+      setModels((prev) =>
+        prev.map((m) => ({ ...m, is_default: m.id === model.id }))
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to set default model");
     }
   };
 
@@ -95,6 +109,7 @@ export default function ModelsPage() {
                   <TableHead>Context Window</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Synced</TableHead>
+                  <TableHead className="text-right">Default</TableHead>
                   <TableHead className="text-right">Enabled</TableHead>
                 </TableRow>
               </TableHeader>
@@ -112,6 +127,18 @@ export default function ModelsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {m.synced_at ? new Date(m.synced_at).toLocaleDateString() : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost" size="sm" className="h-8 w-8 p-0"
+                          onClick={() => handleSetDefault(m)}
+                          disabled={!m.enabled}
+                          title={m.is_default ? "Current default" : "Set as default"}
+                        >
+                          <Star className={`h-4 w-4 ${m.is_default ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end">

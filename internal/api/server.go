@@ -67,6 +67,7 @@ func (s *Server) routes() {
 	// Admin
 	s.mux.HandleFunc("GET /api/models", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleListModels)))
 	s.mux.HandleFunc("PATCH /api/models/{id}", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleUpdateModel)))
+	s.mux.HandleFunc("PUT /api/models/default", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleSetDefaultModel)))
 	s.mux.HandleFunc("GET /api/admin/settings", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleGetSettings)))
 	s.mux.HandleFunc("PUT /api/admin/settings", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleUpdateSettings)))
 	s.mux.HandleFunc("POST /api/admin/test-connection", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleTestConnection)))
