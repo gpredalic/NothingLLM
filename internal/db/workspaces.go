@@ -94,6 +94,23 @@ func (d *DB) RemoveWorkspaceMember(ctx context.Context, workspaceID, userID stri
 	return err
 }
 
+// GetWorkspaceMemberRole returns the role of a user in a workspace.
+// Returns ErrNotFound if the user is not a member.
+func (d *DB) GetWorkspaceMemberRole(ctx context.Context, workspaceID, userID string) (string, error) {
+	var role string
+	err := d.pool.QueryRow(ctx, `
+		SELECT role FROM workspace_members WHERE workspace_id=$1 AND user_id=$2`,
+		workspaceID, userID,
+	).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return role, nil
+}
+
 func (d *DB) ListWorkspaceMembers(ctx context.Context, workspaceID string) ([]map[string]string, error) {
 	rows, err := d.pool.Query(ctx, `
 		SELECT u.id, u.email, wm.role FROM workspace_members wm
