@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export default function SetupPage() {
@@ -17,9 +17,16 @@ export default function SetupPage() {
   // If setup is already complete, redirect to login
   useEffect(() => {
     fetch("/api/setup/status")
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 404) {
+          // Server is in full mode — setup routes don't exist
+          router.replace("/login");
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
-        if (data.complete) {
+        if (data && data.complete) {
           router.replace("/login");
         }
       })
@@ -36,9 +43,9 @@ export default function SetupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: adminEmail, password: adminPassword }),
       });
+      const adminData = await adminRes.json();
       if (!adminRes.ok) {
-        const err = await adminRes.json();
-        throw new Error(err.error || "Failed to create admin");
+        throw new Error(adminData.error || "Failed to create admin");
       }
 
       // Step 2: Complete setup
@@ -47,9 +54,9 @@ export default function SetupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
+      const completeData = await completeRes.json();
       if (!completeRes.ok) {
-        const err = await completeRes.json();
-        throw new Error(err.error || "Failed to complete setup");
+        throw new Error(completeData.error || "Failed to complete setup");
       }
 
       // Redirect to login
@@ -70,11 +77,8 @@ export default function SetupPage() {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="text-center">
             <CardTitle>Create Admin Account</CardTitle>
-            <CardDescription>
-              Set up the first administrator. You can configure your model provider after logging in.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

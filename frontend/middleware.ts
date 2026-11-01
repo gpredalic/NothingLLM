@@ -19,8 +19,9 @@ export function middleware(request: NextRequest) {
   // Check for session cookie
   const session = request.cookies.get("session");
   if (!session || !session.value) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    // Redirect to /setup — it will redirect to /login if setup is complete
+    const setupUrl = new URL("/setup", request.url);
+    return NextResponse.redirect(setupUrl);
   }
 
   return NextResponse.next();

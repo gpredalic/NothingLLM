@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"syscall"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -212,11 +213,12 @@ func (s *SetupServer) handleComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trigger self-restart so the server switches to full mode.
+	// Trigger graceful self-restart so the server switches to full mode.
+	// SIGTERM triggers the existing shutdown handler which drains connections.
 	// Docker's restart:unless-stopped will bring it back in full mode.
 	go func() {
-		time.Sleep(500 * time.Millisecond) // let the HTTP response flush
-		os.Exit(0)
+		time.Sleep(200 * time.Millisecond) // let the HTTP response flush
+		syscall.Kill(os.Getpid(), syscall.SIGTERM)
 	}()
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "setup complete"})
