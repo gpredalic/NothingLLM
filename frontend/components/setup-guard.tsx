@@ -24,7 +24,7 @@ export function SetupGuard({ children }: { children: React.ReactNode }) {
 
         if (!data.has_admin) {
           setState("setup");
-          router.replace("/register");
+          router.replace("/setup");
         } else {
           setState("ready");
         }

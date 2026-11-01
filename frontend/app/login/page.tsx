@@ -30,7 +30,7 @@ export default function LoginPage() {
         if (cancelled) return;
 
         if (!data.has_admin) {
-          router.replace("/register");
+          router.replace("/setup");
         } else {
           setChecking(false);
         }

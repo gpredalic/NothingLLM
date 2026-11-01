@@ -13,7 +13,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/register",
+        source: "/setup",
         headers: [
           { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
         ],
