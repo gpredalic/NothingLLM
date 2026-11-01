@@ -13,7 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // Public pages render without sidebar or guard
-  if (pathname === "/setup" || pathname === "/login") {
+  if (pathname === "/setup" || pathname === "/login" || pathname === "/register") {
     return <>{children}</>;
   }
 

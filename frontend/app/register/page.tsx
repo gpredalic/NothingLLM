@@ -17,24 +17,30 @@ export default function RegisterPage() {
 
   // If setup is already complete, redirect to login
   useEffect(() => {
-    fetch("/api/setup/status", { cache: "no-store" })
-      .then((r) => {
+    async function checkSetup() {
+      try {
+        const r = await fetch("/api/setup/status", { cache: "no-store" });
         if (r.status === 404) {
           // Server is in full mode — setup routes don't exist
           router.replace("/login");
-          return null;
+          return;
         }
-        return r.json();
-      })
-      .then((data) => {
+        if (!r.ok) {
+          // API not ready or unexpected error — show the form
+          setChecking(false);
+          return;
+        }
+        const data = await r.json();
         setChecking(false);
         if (data && data.complete) {
           router.replace("/login");
         }
-      })
-      .catch(() => {
+      } catch {
+        // Network error or non-JSON response — show the form
         setChecking(false);
-      });
+      }
+    }
+    checkSetup();
   }, [router]);
 
   const handleComplete = async () => {
