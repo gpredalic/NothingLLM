@@ -78,7 +78,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t p-3 space-y-2">
+      <div className="border-t p-3 pt-4 pb-4 space-y-3">
         <Button
           variant="ghost"
           size="sm"
@@ -88,7 +88,7 @@ export function Sidebar() {
           {open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
           {open && <span className="ml-2">Collapse</span>}
         </Button>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 pt-1">
           <Button
             variant="ghost"
             size="icon"

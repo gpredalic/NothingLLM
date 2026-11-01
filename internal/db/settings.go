@@ -51,7 +51,7 @@ func (d *DB) MarkSetupComplete(ctx context.Context) error {
 // LoadConfigFromDB reads application settings from the database.
 // Returns a map of key-value pairs for the known config keys.
 func (d *DB) LoadConfigFromDB(ctx context.Context) (map[string]string, error) {
-	keys := []string{"openai_api_key", "qdrant_url", "qdrant_api_key", "session_secret"}
+	keys := []string{"openai_api_key", "openai_base_url", "qdrant_url", "qdrant_api_key", "session_secret"}
 	out := make(map[string]string, len(keys))
 	for _, k := range keys {
 		v, err := d.GetSetting(ctx, k)

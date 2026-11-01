@@ -126,8 +126,13 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	embModel, _ := s.db.GetSetting(ctx, "embedding_model")
+	baseURL := cfg["openai_base_url"]
+	if baseURL == "" {
+		baseURL = "https://api.openai.com/v1"
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"openai_api_key":  maskedKey,
+		"openai_base_url": baseURL,
 		"qdrant_url":      cfg["qdrant_url"],
 		"qdrant_api_key":  maskValue(cfg["qdrant_api_key"]),
 		"embedding_model": embModel,
@@ -137,6 +142,7 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		OpenAIAPIKey   *string `json:"openai_api_key"`
+		OpenAIBaseURL  *string `json:"openai_base_url"`
 		QdrantURL      *string `json:"qdrant_url"`
 		QdrantAPIKey   *string `json:"qdrant_api_key"`
 		EmbeddingModel *string `json:"embedding_model"`
@@ -149,6 +155,12 @@ func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 	if body.OpenAIAPIKey != nil && *body.OpenAIAPIKey != "" {
 		if err := s.db.SetSetting(ctx, "openai_api_key", *body.OpenAIAPIKey); err != nil {
 			writeErr(w, http.StatusInternalServerError, "failed to save openai key")
+			return
+		}
+	}
+	if body.OpenAIBaseURL != nil && *body.OpenAIBaseURL != "" {
+		if err := s.db.SetSetting(ctx, "openai_base_url", *body.OpenAIBaseURL); err != nil {
+			writeErr(w, http.StatusInternalServerError, "failed to save openai base url")
 			return
 		}
 	}
