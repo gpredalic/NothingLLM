@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
+/** Safely extract an error message from a Response without assuming JSON. */
+async function safeError(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    return data.error || `Request failed (${res.status})`;
+  } catch {
+    return `Request failed (${res.status})`;
+  }
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -48,9 +58,9 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: adminEmail, password: adminPassword }),
       });
-      const adminData = await adminRes.json();
       if (!adminRes.ok) {
-        throw new Error(adminData.error || "Failed to create admin");
+        const msg = await safeError(adminRes);
+        throw new Error(msg);
       }
 
       const completeRes = await fetch("/api/setup/complete", {
@@ -58,9 +68,9 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const completeData = await completeRes.json();
       if (!completeRes.ok) {
-        throw new Error(completeData.error || "Failed to complete setup");
+        const msg = await safeError(completeRes);
+        throw new Error(msg);
       }
 
       router.push("/login");
