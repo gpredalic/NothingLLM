@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -183,12 +184,9 @@ func (s *SetupServer) handleComplete(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "admin user required")
 		return
 	}
-	if _, err := s.database.GetSetting(ctx, "openai_api_key"); err != nil {
-		writeErr(w, http.StatusBadRequest, "openai_api_key required")
-		return
-	}
+
+	// Auto-set qdrant_url from environment if not already set (Docker deployment)
 	if _, err := s.database.GetSetting(ctx, "qdrant_url"); err != nil {
-		// Auto-set qdrant_url from environment (Docker deployment)
 		if s.qdrantURL != "" {
 			if err := s.database.SetSetting(ctx, "qdrant_url", s.qdrantURL); err != nil {
 				writeErr(w, http.StatusInternalServerError, "failed to save qdrant_url")
@@ -197,9 +195,6 @@ func (s *SetupServer) handleComplete(w http.ResponseWriter, r *http.Request) {
 			if s.qdrantKey != "" {
 				s.database.SetSetting(ctx, "qdrant_api_key", s.qdrantKey)
 			}
-		} else {
-			writeErr(w, http.StatusBadRequest, "qdrant_url required")
-			return
 		}
 	}
 
@@ -216,6 +211,14 @@ func (s *SetupServer) handleComplete(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "failed to mark complete")
 		return
 	}
+
+	// Trigger self-restart so the server switches to full mode.
+	// Docker's restart:unless-stopped will bring it back in full mode.
+	go func() {
+		time.Sleep(500 * time.Millisecond) // let the HTTP response flush
+		os.Exit(0)
+	}()
+
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "setup complete"})
 }
 

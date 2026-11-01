@@ -87,6 +87,19 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* No model provider configured banner */}
+      {health && health.openai?.status === "not_configured" && (
+        <div className="mb-4 rounded-md border border-yellow-300 bg-yellow-50 p-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-yellow-600" />
+            <span className="text-sm font-medium text-yellow-800">No model provider configured</span>
+          </div>
+          <p className="text-xs text-yellow-700 mt-1 ml-6">
+            Go to <Link href="/settings" className="underline font-medium">Settings</Link> to configure your LLM API key.
+          </p>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {error}

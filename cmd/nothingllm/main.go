@@ -94,9 +94,24 @@ func runSetupMode(logger *slog.Logger, database *db.DB) {
 	setupSrv := api.NewSetupServer(database, os.Getenv("QDRANT_URL"), os.Getenv("QDRANT_API_KEY"))
 	mux := http.NewServeMux()
 	mux.Handle("/api/setup/", setupSrv.Handler())
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Dynamically check setup state to prevent redirect loops
+		complete, _ := database.IsSetupComplete(r.Context())
+		if complete {
+			w.Write([]byte(`{"status":"ok"}`))
+		} else {
+			w.Write([]byte(`{"status":"ok","mode":"setup"}`))
+		}
+	})
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok","mode":"setup"}`))
+		complete, _ := database.IsSetupComplete(r.Context())
+		if complete {
+			w.Write([]byte(`{"status":"ok"}`))
+		} else {
+			w.Write([]byte(`{"status":"ok","mode":"setup"}`))
+		}
 	})
 	mux.HandleFunc("GET /version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

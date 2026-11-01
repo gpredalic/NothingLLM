@@ -74,9 +74,6 @@ func (c *Config) validate() error {
 	if c.Qdrant.URL == "" {
 		return fmt.Errorf("config: qdrant.url is required")
 	}
-	if c.OpenAI.APIKey == "" {
-		return fmt.Errorf("config: openai.api_key is required")
-	}
 	if c.Server.Addr == "" {
 		c.Server.Addr = ":8080"
 	}
