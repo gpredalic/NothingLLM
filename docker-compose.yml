@@ -35,7 +35,7 @@ services:
     image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.6
     command: --model-id BAAI/bge-m3
     ports:
-      - "8081:80"
+      - "7997:80"
     volumes:
       - bge_m3_data:/data
     healthcheck:
