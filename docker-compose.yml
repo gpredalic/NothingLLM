@@ -39,7 +39,7 @@ services:
     volumes:
       - bge_m3_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:80/health\")' || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/health || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 30

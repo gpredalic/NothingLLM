@@ -198,13 +198,16 @@ func (s *Server) handleTestConnection(w http.ResponseWriter, r *http.Request) {
 	if bgeURL == "" {
 		results["bge_m3"] = map[string]string{"status": "not_configured"}
 	} else {
-		client := openai.NewClient("", bgeURL)
-		testCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
-		if err := client.Ping(testCtx); err != nil {
+		resp, err := http.Get(bgeURL + "/health")
+		if err != nil {
 			results["bge_m3"] = map[string]string{"status": "failed", "error": err.Error()}
 		} else {
-			results["bge_m3"] = map[string]string{"status": "ok"}
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				results["bge_m3"] = map[string]string{"status": "ok"}
+			} else {
+				results["bge_m3"] = map[string]string{"status": "failed", "error": "HTTP " + http.StatusText(resp.StatusCode)}
+			}
 		}
 	}
 
@@ -280,13 +283,20 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if bgeURL == "" {
 		results["bge_m3"] = map[string]string{"status": "not_configured"}
 	} else {
-		client := openai.NewClient("", bgeURL)
 		testCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
-		if err := client.Ping(testCtx); err != nil {
+		client := &http.Client{Timeout: 2 * time.Second}
+		req, _ := http.NewRequestWithContext(testCtx, http.MethodGet, bgeURL+"/health", nil)
+		resp, err := client.Do(req)
+		if err != nil {
 			results["bge_m3"] = map[string]string{"status": "down", "error": err.Error()}
 		} else {
-			results["bge_m3"] = map[string]string{"status": "ok"}
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				results["bge_m3"] = map[string]string{"status": "ok"}
+			} else {
+				results["bge_m3"] = map[string]string{"status": "down", "error": "HTTP " + http.StatusText(resp.StatusCode)}
+			}
 		}
 	}
 
