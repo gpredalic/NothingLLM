@@ -13,40 +13,25 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [checking, setChecking] = useState(true);
 
-  // If setup is already complete, redirect to login
+  // Non-blocking: check if setup is already complete. If yes, redirect to /login.
+  // The form is ALWAYS visible immediately — no loading gate.
   useEffect(() => {
-    async function checkSetup() {
-      try {
-        const r = await fetch("/api/setup/status", { cache: "no-store" });
-        if (r.status === 404) {
-          // Server is in full mode — setup routes don't exist
-          router.replace("/login");
-          return;
-        }
-        if (!r.ok) {
-          // API not ready or unexpected error — show the form
-          setChecking(false);
-          return;
-        }
-        const data = await r.json();
-        setChecking(false);
-        if (data && data.complete) {
+    let cancelled = false;
+    fetch("/api/setup/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data && data.complete) {
           router.replace("/login");
         }
-      } catch {
-        // Network error or non-JSON response — show the form
-        setChecking(false);
-      }
-    }
-    checkSetup();
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [router]);
 
   const handleComplete = async () => {
     setError("");
 
-    // Client-side validation
     if (!adminEmail || !adminPassword) {
       setError("Please fill in all fields.");
       return;
@@ -58,7 +43,6 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      // Step 1: Create admin
       const adminRes = await fetch("/api/setup/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,7 +53,6 @@ export default function RegisterPage() {
         throw new Error(adminData.error || "Failed to create admin");
       }
 
-      // Step 2: Complete setup
       const completeRes = await fetch("/api/setup/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,7 +63,6 @@ export default function RegisterPage() {
         throw new Error(completeData.error || "Failed to complete setup");
       }
 
-      // Redirect to login
       router.push("/login");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Setup failed");
@@ -88,17 +70,6 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-
-  if (checking) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted-foreground">Loading...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen items-center justify-center bg-background p-4">

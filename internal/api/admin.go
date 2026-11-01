@@ -261,6 +261,18 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, results)
 }
 
+// handleSetupStatus reports setup state. Always available (both setup and full mode).
+func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	complete, _ := s.db.IsSetupComplete(ctx)
+	adminCount, _ := s.db.CountAdmins(ctx)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"complete":  complete,
+		"has_admin": adminCount > 0,
+	})
+}
+
 func maskValue(v string) string {
 	if v == "" {
 		return ""

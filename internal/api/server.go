@@ -74,6 +74,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/admin/test-connection", auth.RequireAuth(s.auth, auth.RequireAdmin(s.handleTestConnection)))
 	s.mux.HandleFunc("GET /api/admin/stats", auth.RequireAuth(s.auth, s.handleGetStats))
 	s.mux.HandleFunc("GET /api/health", s.handleHealth)
+	s.mux.HandleFunc("GET /api/setup/status", s.handleSetupStatus)
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
