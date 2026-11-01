@@ -82,6 +82,10 @@ func (s *SetupServer) handleCreateAdmin(w http.ResponseWriter, r *http.Request) 
 		writeErr(w, http.StatusBadRequest, "email and password are required")
 		return
 	}
+	if len(body.Password) < 8 {
+		writeErr(w, http.StatusBadRequest, "password must be at least 8 characters long")
+		return
+	}
 	if len(body.Email) > 254 || len(body.Password) > 128 {
 		writeErr(w, http.StatusBadRequest, "input too long")
 		return

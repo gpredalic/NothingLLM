@@ -39,6 +39,17 @@ export default function RegisterPage() {
 
   const handleComplete = async () => {
     setError("");
+
+    // Client-side validation
+    if (!adminEmail || !adminPassword) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    if (adminPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
     setLoading(true);
     try {
       // Step 1: Create admin
@@ -112,13 +123,12 @@ export default function RegisterPage() {
                 placeholder="min 8 characters"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                minLength={8}
               />
             </div>
             <Button
               className="w-full"
               onClick={handleComplete}
-              disabled={loading || !adminEmail || !adminPassword}
+              disabled={loading}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {loading ? "Creating..." : "Create Admin Account"}
