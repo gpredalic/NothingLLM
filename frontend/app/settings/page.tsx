@@ -43,7 +43,6 @@ export default function SettingsPage() {
     try {
       const updates: Record<string, string> = { openai_base_url: openaiUrl };
       if (openaiKey) updates.openai_api_key = openaiKey;
-      updates.embedding_model = "BAAI/bge-m3";
       await updateAdminSettings(updates as Partial<AdminSettings>);
       setMessage({ type: "success", text: "Settings saved successfully" });
       toast("success", "Settings saved");
@@ -78,11 +77,11 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="h-8 w-32 animate-pulse rounded bg-muted mb-6" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-lg bg-muted" />
+            <div key={i} className="h-36 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       </div>
@@ -91,36 +90,35 @@ export default function SettingsPage() {
 
   const openaiStatus = health?.openai?.status || "unknown";
   const qdrantStatus = health?.qdrant?.status || "unknown";
+  const bgeM3Status = (health as any)?.bge_m3?.status || "unknown";
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Settings</h1>
+    <div className="p-4 sm:p-6">
+      <h1 className="text-xl sm:text-2xl font-semibold mb-5">Settings</h1>
       {message && (
         <div className={cn("mb-4 rounded-md border p-3 text-sm", message.type === "success" ? "border-green-300 bg-green-50 text-green-700" : "border-destructive/50 bg-destructive/10 text-destructive")}>
           {message.text}
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Theme */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              {theme === "dark" ? <Moon className="h-4 w-4" /> : theme === "light" ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Appearance */}
+        <Card className="h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              {theme === "dark" ? <Moon className="h-3.5 w-3.5" /> : theme === "light" ? <Sun className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
               Appearance
             </CardTitle>
-            <CardDescription>Select theme mode</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               {(["light", "dark", "system"] as const).map((t) => (
                 <Button
                   key={t}
                   variant={theme === t ? "default" : "outline"}
                   size="sm"
-                  className="flex-1"
+                  className="flex-1 h-8 text-xs"
                   onClick={() => setTheme(t)}
                 >
-                  {t === "light" ? <Sun className="h-3 w-3 mr-1" /> : t === "dark" ? <Moon className="h-3 w-3 mr-1" /> : <Monitor className="h-3 w-3 mr-1" />}
                   {t.charAt(0).toUpperCase() + t.slice(1)}
                 </Button>
               ))}
@@ -128,114 +126,119 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* OpenAI-Compatible API Provider */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Key className="h-4 w-4" /> OpenAI-Compatible API
+        {/* OpenAI-Compatible API */}
+        <Card className="h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Key className="h-3.5 w-3.5" /> LLM Provider
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               {openaiStatus === "ok" ? (
                 <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
               ) : openaiStatus === "down" ? (
-                <span className="flex items-center gap-1 text-destructive"><XCircle className="h-3 w-3" /> Not Connected</span>
+                <span className="flex items-center gap-1 text-destructive"><XCircle className="h-3 w-3" /> Disconnected</span>
               ) : (
                 <span className="text-muted-foreground">Not configured</span>
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Base URL / Endpoint</label>
-              <Input
-                type="text"
-                placeholder="https://api.openai.com/v1"
-                value={openaiUrl}
-                onChange={(e) => setOpenaiUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                e.g. http://ollama:11434/v1, https://api.openai.com/v1
-              </p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">API Key</label>
-              <Input
-                type="password"
-                placeholder={settings?.openai_api_key ? "**** " + (settings.openai_api_key.slice(-4)) : "sk-..."}
-                value={openaiKey}
-                onChange={(e) => setOpenaiKey(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={testing} className="w-full">
-              {testing ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Plug className="h-3 w-3 mr-2" />}
+          <CardContent className="space-y-2">
+            <Input
+              type="text"
+              placeholder="http://host:port/v1"
+              value={openaiUrl}
+              onChange={(e) => setOpenaiUrl(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Input
+              type="password"
+              placeholder={settings?.openai_api_key ? "**** " + (settings.openai_api_key.slice(-4)) : "API Key"}
+              value={openaiKey}
+              onChange={(e) => setOpenaiKey(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Button variant="outline" size="sm" onClick={handleTestConnection} disabled={testing} className="w-full h-8 text-xs">
+              {testing ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Plug className="h-3 w-3 mr-1.5" />}
               {testing ? "Testing..." : "Test Connection"}
             </Button>
           </CardContent>
         </Card>
 
         {/* Embeddings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Cpu className="h-4 w-4" /> Embeddings
+        <Card className="h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Cpu className="h-3.5 w-3.5" /> Embeddings
             </CardTitle>
-            <CardDescription>Embedding model provider</CardDescription>
+            <CardDescription className="text-xs">
+              {bgeM3Status === "ok" ? (
+                <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
+              ) : bgeM3Status === "down" || bgeM3Status === "failed" ? (
+                <span className="flex items-center gap-1 text-destructive"><XCircle className="h-3 w-3" /> Disconnected</span>
+              ) : (
+                <span className="text-muted-foreground">Not configured</span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-3 rounded-md border p-3">
-              <Cpu className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <div className="text-sm font-medium">BGE-M3</div>
-                <div className="text-xs text-muted-foreground">BAAI/bge-m3 (local)</div>
+            <div className="flex items-center gap-2.5 rounded-md border p-2.5">
+              <Cpu className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs font-medium">BGE-M3</div>
+                <div className="text-[10px] text-muted-foreground truncate">BAAI/bge-m3</div>
               </div>
-              <CheckCircle className="h-4 w-4 text-green-500 ml-auto" />
+              {bgeM3Status === "ok" && <CheckCircle className="h-3.5 w-3.5 text-green-500 ml-auto shrink-0" />}
+              {(bgeM3Status === "down" || bgeM3Status === "failed") && <XCircle className="h-3.5 w-3.5 text-destructive ml-auto shrink-0" />}
             </div>
           </CardContent>
         </Card>
 
-        {/* Service Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Database className="h-4 w-4" /> Services
+        {/* Services */}
+        <Card className="h-full sm:col-span-2 lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Database className="h-3.5 w-3.5" /> Services
             </CardTitle>
-            <CardDescription>Internal service status</CardDescription>
+            <CardDescription className="text-xs">Internal service status</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Qdrant (Vector DB)</span>
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                <span className="text-xs font-medium">Qdrant</span>
                 {qdrantStatus === "ok" ? (
-                  <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
+                  <span className="flex items-center gap-1 text-[10px] text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
                 ) : (
-                  <span className="flex items-center gap-1 text-destructive"><XCircle className="h-3 w-3" /> Not Available</span>
+                  <span className="flex items-center gap-1 text-[10px] text-destructive"><XCircle className="h-3 w-3" /> Down</span>
                 )}
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span>PostgreSQL</span>
-                {(health?.database?.status === "ok") ? (
-                  <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                <span className="text-xs font-medium">PostgreSQL</span>
+                {health?.database?.status === "ok" ? (
+                  <span className="flex items-center gap-1 text-[10px] text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
                 ) : (
-                  <span className="flex items-center gap-1 text-destructive"><XCircle className="h-3 w-3" /> Not Available</span>
+                  <span className="flex items-center gap-1 text-[10px] text-destructive"><XCircle className="h-3 w-3" /> Down</span>
                 )}
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span>BGE-M3 (Embeddings)</span>
-                <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Local</span>
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                <span className="text-xs font-medium">BGE-M3</span>
+                {bgeM3Status === "ok" ? (
+                  <span className="flex items-center gap-1 text-[10px] text-green-600"><CheckCircle className="h-3 w-3" /> Connected</span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] text-destructive"><XCircle className="h-3 w-3" /> Down</span>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Save */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Save Changes</CardTitle>
-            <CardDescription>Apply your configuration</CardDescription>
+        <Card className="h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Save Changes</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button onClick={handleSave} disabled={saving} className="w-full">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            <Button onClick={handleSave} disabled={saving} className="w-full h-8 text-xs">
+              {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : null}
               {saving ? "Saving..." : "Save Settings"}
             </Button>
           </CardContent>

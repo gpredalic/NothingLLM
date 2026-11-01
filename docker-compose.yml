@@ -31,6 +31,21 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  bge-m3:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.6
+    command: --model-id BAAI/bge-m3
+    ports:
+      - "8081:80"
+    volumes:
+      - bge_m3_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:80/health\")' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -42,11 +57,14 @@ services:
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-placeholder}
+      BGE_M3_URL: http://bge-m3:80
       SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-in-production}
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
+        condition: service_healthy
+      bge-m3:
         condition: service_healthy
     restart: unless-stopped
 
@@ -66,3 +84,4 @@ services:
 volumes:
   postgres_data:
   qdrant_data:
+  bge_m3_data:

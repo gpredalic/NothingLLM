@@ -159,7 +159,7 @@ export default function DashboardPage() {
         <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
           <Cpu className="h-4 w-4" /> Service Status
         </h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {health && (
             <>
               <div className="flex items-center gap-2 rounded-md border p-3">
@@ -174,8 +174,13 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2 rounded-md border p-3">
                 <StatusDot status={health.openai.status} />
-                <span className="text-sm font-medium">OpenAI</span>
+                <span className="text-sm font-medium">LLM Provider</span>
                 <span className="ml-auto text-xs text-muted-foreground capitalize">{health.openai.status}</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border p-3">
+                <StatusDot status={health.bge_m3?.status || "unknown"} />
+                <span className="text-sm font-medium">BGE-M3</span>
+                <span className="ml-auto text-xs text-muted-foreground capitalize">{health.bge_m3?.status || "unknown"}</span>
               </div>
             </>
           )}

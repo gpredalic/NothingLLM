@@ -260,6 +260,7 @@ export interface HealthStatus {
   database: { status: string; error?: string };
   qdrant: { status: string; error?: string };
   openai: { status: string; error?: string };
+  bge_m3: { status: string; error?: string };
 }
 
 export async function getHealth() {

@@ -32,6 +32,7 @@ type QdrantConfig struct {
 }
 
 type OpenAIConfig struct {
+	BaseURL        string `yaml:"base_url"`
 	APIKey         string `yaml:"api_key"`
 	EmbeddingModel string `yaml:"embedding_model"`
 }

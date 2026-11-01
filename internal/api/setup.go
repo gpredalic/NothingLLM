@@ -23,10 +23,11 @@ type SetupServer struct {
 	database    *db.DB
 	qdrantURL   string
 	qdrantKey   string
+	bgeM3URL    string
 }
 
 func NewSetupServer(database *db.DB, qdrantURL, qdrantKey string) *SetupServer {
-	return &SetupServer{database: database, qdrantURL: qdrantURL, qdrantKey: qdrantKey}
+	return &SetupServer{database: database, qdrantURL: qdrantURL, qdrantKey: qdrantKey, bgeM3URL: os.Getenv("BGE_M3_URL")}
 }
 
 // Handler returns the setup mux.
@@ -200,6 +201,13 @@ func (s *SetupServer) handleComplete(w http.ResponseWriter, r *http.Request) {
 			if s.qdrantKey != "" {
 				s.database.SetSetting(ctx, "qdrant_api_key", s.qdrantKey)
 			}
+		}
+	}
+
+	// Auto-set bge_m3_url from environment if not already set (Docker deployment)
+	if _, err := s.database.GetSetting(ctx, "bge_m3_url"); err != nil {
+		if s.bgeM3URL != "" {
+			s.database.SetSetting(ctx, "bge_m3_url", s.bgeM3URL)
 		}
 	}
 

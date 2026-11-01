@@ -79,7 +79,7 @@ func loadConfigFromDB(ctx context.Context, database *db.DB, dsn string) (*config
 			URL: settings["qdrant_url"], APIKey: settings["qdrant_api_key"], SyncInterval: 60 * time.Second,
 		},
 		OpenAI: config.OpenAIConfig{
-			APIKey: settings["openai_api_key"], EmbeddingModel: "text-embedding-3-small",
+			BaseURL: settings["openai_base_url"], APIKey: settings["openai_api_key"], EmbeddingModel: "text-embedding-3-small",
 		},
 		Auth:      config.AuthConfig{SessionTTL: 24 * time.Hour, BcryptCost: 12},
 		RateLimit: config.RateLimitConfig{RequestsPerMinute: 100, LoginPerMinute: 5},
@@ -139,7 +139,7 @@ func runSetupMode(logger *slog.Logger, database *db.DB) {
 
 func runFullMode(logger *slog.Logger, ctx context.Context, database *db.DB, cfg *config.Config) {
 	qdrantClient := qdrant.NewClient(cfg.Qdrant.URL, cfg.Qdrant.APIKey)
-	openaiClient := openai.NewClient(cfg.OpenAI.APIKey, "")
+	openaiClient := openai.NewClient(cfg.OpenAI.APIKey, cfg.OpenAI.BaseURL)
 
 	authSvc := auth.NewService(database, cfg.Auth.SessionTTL, cfg.Auth.BcryptCost)
 	pipeline := rag.NewPipeline(qdrantClient, openaiClient, database)

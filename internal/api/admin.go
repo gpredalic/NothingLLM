@@ -179,16 +179,32 @@ func (s *Server) handleTestConnection(w http.ResponseWriter, r *http.Request) {
 	results := map[string]any{}
 
 	openaiKey, _ := s.db.GetSetting(ctx, "openai_api_key")
+	openaiURL, _ := s.db.GetSetting(ctx, "openai_base_url")
 	if openaiKey == "" {
 		results["openai"] = map[string]string{"status": "not_configured"}
 	} else {
-		client := openai.NewClient(openaiKey, "")
+		client := openai.NewClient(openaiKey, openaiURL)
 		testCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		if err := client.Ping(testCtx); err != nil {
 			results["openai"] = map[string]string{"status": "failed", "error": err.Error()}
 		} else {
 			results["openai"] = map[string]string{"status": "ok"}
+		}
+	}
+
+	// BGE-M3 embeddings service
+	bgeURL, _ := s.db.GetSetting(ctx, "bge_m3_url")
+	if bgeURL == "" {
+		results["bge_m3"] = map[string]string{"status": "not_configured"}
+	} else {
+		client := openai.NewClient("", bgeURL)
+		testCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		if err := client.Ping(testCtx); err != nil {
+			results["bge_m3"] = map[string]string{"status": "failed", "error": err.Error()}
+		} else {
+			results["bge_m3"] = map[string]string{"status": "ok"}
 		}
 	}
 
@@ -245,16 +261,32 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	openaiKey, _ := s.db.GetSetting(ctx, "openai_api_key")
+	openaiURL, _ := s.db.GetSetting(ctx, "openai_base_url")
 	if openaiKey == "" {
 		results["openai"] = map[string]string{"status": "not_configured"}
 	} else {
-		client := openai.NewClient(openaiKey, "")
-		testCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		client := openai.NewClient(openaiKey, openaiURL)
+		testCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
 		if err := client.Ping(testCtx); err != nil {
 			results["openai"] = map[string]string{"status": "down", "error": err.Error()}
 		} else {
 			results["openai"] = map[string]string{"status": "ok"}
+		}
+	}
+
+	// BGE-M3 embeddings service
+	bgeURL, _ := s.db.GetSetting(ctx, "bge_m3_url")
+	if bgeURL == "" {
+		results["bge_m3"] = map[string]string{"status": "not_configured"}
+	} else {
+		client := openai.NewClient("", bgeURL)
+		testCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		if err := client.Ping(testCtx); err != nil {
+			results["bge_m3"] = map[string]string{"status": "down", "error": err.Error()}
+		} else {
+			results["bge_m3"] = map[string]string{"status": "ok"}
 		}
 	}
 

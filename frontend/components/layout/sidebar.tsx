@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Users,
   Settings,
-  Cpu,
   Sun,
   Moon,
   Monitor,
@@ -29,7 +28,6 @@ const navItems = [
   { href: "/collections", label: "Collections", icon: Database },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/users", label: "Users", icon: Users },
-  { href: "/models", label: "Models", icon: Cpu },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
