@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
 	"nothingllm/internal/audit"
 	"nothingllm/internal/auth"
@@ -11,20 +13,23 @@ import (
 )
 
 type Server struct {
-	auth  *auth.Service
-	db    *db.DB
-	rag   *rag.Pipeline
-	audit *audit.Logger
-	mux   *http.ServeMux
+	auth         *auth.Service
+	db           *db.DB
+	rag          *rag.Pipeline
+	audit        *audit.Logger
+	mux          *http.ServeMux
+	cookieSecure bool
 }
 
 func NewServer(authSvc *auth.Service, database *db.DB, pipeline *rag.Pipeline, auditLog *audit.Logger) *Server {
+	cookieSecure := strings.EqualFold(os.Getenv("COOKIE_SECURE"), "true") || os.Getenv("COOKIE_SECURE") == "1"
 	s := &Server{
-		auth:  authSvc,
-		db:    database,
-		rag:   pipeline,
-		audit: auditLog,
-		mux:   http.NewServeMux(),
+		auth:         authSvc,
+		db:           database,
+		rag:          pipeline,
+		audit:        auditLog,
+		mux:          http.NewServeMux(),
+		cookieSecure: cookieSecure,
 	}
 	s.routes()
 	return s
@@ -150,8 +155,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Value:    sessionID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   s.cookieSecure,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   86400,
 	})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
