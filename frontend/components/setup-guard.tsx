@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 /**
  * SetupGuard checks if the backend is in setup mode.
- * If setup is not complete, redirects to /setup.
+ * If setup is not complete, redirects to /register.
  * Renders children only after confirming setup is complete.
  */
 export function SetupGuard({ children }: { children: React.ReactNode }) {
@@ -17,14 +17,14 @@ export function SetupGuard({ children }: { children: React.ReactNode }) {
 
     async function check() {
       try {
-        const res = await fetch("/api/health");
+        const res = await fetch("/api/health", { cache: "no-store" });
         if (!res.ok) return; // Can't reach API, let the page handle it
         const data = await res.json();
         if (cancelled) return;
 
         if (data.mode === "setup") {
           setState("setup");
-          router.replace("/setup");
+          router.replace("/register");
         } else {
           setState("ready");
         }
