@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listWorkspaces, listCollections, listUsers, getAdminStats, getHealth } from "@/lib/api";
 import type { Workspace, Collection, User, AdminStats, HealthStatus } from "@/lib/api";
-import { FolderKanban, Database, MessageSquare, Users, Activity, Cpu } from "lucide-react";
+import { FolderKanban, Database, Users, Activity, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function SkeletonCard() {
@@ -182,25 +182,6 @@ export default function DashboardPage() {
           {!health && (
             <div className="col-span-full text-sm text-muted-foreground">Health check unavailable</div>
           )}
-        </div>
-      </div>
-
-      {/* Quick Links */}
-      <div className="mt-6">
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</h2>
-        <div className="flex gap-3">
-          <Link href="/chat" className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
-            <MessageSquare className="h-4 w-4 inline mr-2" />
-            Open Chat
-          </Link>
-          <Link href="/workspaces" className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
-            <FolderKanban className="h-4 w-4 inline mr-2" />
-            Manage Workspaces
-          </Link>
-          <Link href="/collections" className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
-            <Database className="h-4 w-4 inline mr-2" />
-            Browse Collections
-          </Link>
         </div>
       </div>
     </div>

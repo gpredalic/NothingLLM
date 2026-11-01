@@ -80,7 +80,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t p-2 space-y-1">
+      <div className="border-t p-3 space-y-2">
         <Button
           variant="ghost"
           size="sm"
@@ -88,12 +88,13 @@ export function Sidebar() {
           onClick={() => setOpen(!open)}
         >
           {open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-          {open && <span>Collapse</span>}
+          {open && <span className="ml-2">Collapse</span>}
         </Button>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2">
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8"
             onClick={cycleTheme}
             title={`Theme: ${theme} (click to cycle)`}
           >
@@ -102,6 +103,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8"
             onClick={async () => {
               await logout();
               window.location.href = "/login";

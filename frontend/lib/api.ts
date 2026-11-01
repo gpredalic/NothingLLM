@@ -218,6 +218,7 @@ export async function setDefaultModel(id: string) {
 // Admin Settings
 export interface AdminSettings {
   openai_api_key: string;
+  openai_base_url?: string;
   qdrant_url: string;
   qdrant_api_key: string;
   embedding_model: string;
