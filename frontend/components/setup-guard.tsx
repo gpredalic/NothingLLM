@@ -17,12 +17,12 @@ export function SetupGuard({ children }: { children: React.ReactNode }) {
 
     async function check() {
       try {
-        const res = await fetch("/api/health", { cache: "no-store" });
+        const res = await fetch("/api/setup/status", { cache: "no-store" });
         if (!res.ok) return; // Can't reach API, let the page handle it
         const data = await res.json();
         if (cancelled) return;
 
-        if (data.mode === "setup") {
+        if (!data.has_admin) {
           setState("setup");
           router.replace("/register");
         } else {

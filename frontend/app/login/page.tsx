@@ -14,18 +14,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // On mount: check if setup is complete. If not, redirect to /register.
+  // On mount: check if an admin exists. If not, redirect to /register.
   useEffect(() => {
     let cancelled = false;
 
     async function checkSetup() {
       try {
-        const res = await fetch("/api/health", { cache: "no-store" });
-        if (!res.ok) { setChecking(false); return; }
+        const res = await fetch("/api/setup/status", { cache: "no-store" });
+        if (!res.ok) {
+          // API not ready — show login form (will fail on submit if no users)
+          if (!cancelled) setChecking(false);
+          return;
+        }
         const data = await res.json();
         if (cancelled) return;
 
-        if (data.mode === "setup") {
+        if (!data.has_admin) {
           router.replace("/register");
         } else {
           setChecking(false);

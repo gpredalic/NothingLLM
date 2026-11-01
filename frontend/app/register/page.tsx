@@ -24,14 +24,14 @@ export default function RegisterPage() {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
 
-  // Non-blocking: check if setup is already complete. If yes, redirect to /login.
+  // Non-blocking: check if an admin already exists. If yes, redirect to /login.
   // The form is ALWAYS visible immediately — no loading gate.
   useEffect(() => {
     let cancelled = false;
     fetch("/api/setup/status", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled && data && data.complete) {
+        if (!cancelled && data && data.has_admin) {
           router.replace("/login");
         }
       })
