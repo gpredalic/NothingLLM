@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Paths that don't require auth
-const PUBLIC_PATHS = ["/setup", "/login"];
+const PUBLIC_PATHS = ["/register", "/login"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,9 +19,9 @@ export function middleware(request: NextRequest) {
   // Check for session cookie
   const session = request.cookies.get("session");
   if (!session || !session.value) {
-    // Redirect to /setup — it will redirect to /login if setup is complete
-    const setupUrl = new URL("/setup", request.url);
-    return NextResponse.redirect(setupUrl);
+    // Redirect to /register — it will redirect to /login if setup is complete
+    const registerUrl = new URL("/register", request.url);
+    return NextResponse.redirect(registerUrl);
   }
 
   return NextResponse.next();

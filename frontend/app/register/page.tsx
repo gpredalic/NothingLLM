@@ -7,16 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-export default function SetupPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [checking, setChecking] = useState(true);
 
   // If setup is already complete, redirect to login
   useEffect(() => {
-    fetch("/api/setup/status")
+    fetch("/api/setup/status", { cache: "no-store" })
       .then((r) => {
         if (r.status === 404) {
           // Server is in full mode — setup routes don't exist
@@ -26,11 +27,14 @@ export default function SetupPage() {
         return r.json();
       })
       .then((data) => {
+        setChecking(false);
         if (data && data.complete) {
           router.replace("/login");
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setChecking(false);
+      });
   }, [router]);
 
   const handleComplete = async () => {
@@ -67,6 +71,17 @@ export default function SetupPage() {
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen items-center justify-center bg-background p-4">
@@ -106,7 +121,7 @@ export default function SetupPage() {
               disabled={loading || !adminEmail || !adminPassword}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {loading ? "Setting up..." : "Complete Setup"}
+              {loading ? "Creating..." : "Create Admin Account"}
             </Button>
           </CardContent>
         </Card>
